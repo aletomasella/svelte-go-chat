@@ -23,7 +23,7 @@ const (
 	RateLimiterMessage     = "Your are sending messages too fast. Strike Count : %v\n"
 	MaxStrikeCount         = 5
 	MaxStrikeCountReach    = "You reached the max strike count. Disconnecting...\n"
-	BannedTime             = 60
+	BannedTime             = 30
 )
 
 func safeAdress(addr net.Conn) string {
@@ -33,23 +33,31 @@ func safeAdress(addr net.Conn) string {
 	return addr.RemoteAddr().String()
 }
 
+func secondsUntilUnban(banTime time.Time) int {
+	return int(time.Until(banTime.Add(BannedTime * time.Second)).Seconds())
+}
+
+func inTimeSpan(start, end, check time.Time) bool {
+	return check.After(start) && check.Before(end)
+}
+
 func handleMessages(msg domain.Message, clients map[string]*domain.Client, bannedClients map[string]*domain.Client) {
 
 	commandsKeys := maps.Keys(Commands)
 	address := msg.Conn.RemoteAddr().String()
-	// addressWithoutPort := address[:len(address)-6]
-	// bannedClient, ok := bannedClients[addressWithoutPort]
+	addressWithoutPort := address[:len(address)-6]
+	bannedClient, ok := bannedClients[addressWithoutPort]
 
-	// if ok {
-	// 	if bannedClient.Conn != nil {
-	// 		bannedClient.Conn.Write([]byte(fmt.Sprintf("You are banned for %v seconds\n", bannedClient.BanTime.Second())))
-	// 		bannedClient.Conn.Close()
-	// 		return
-	// 	}
-	// 	if time.Since(bannedClient.BanTime) > BannedTime*time.Second {
-	// 		delete(bannedClients, address)
-	// 	}
-	// }
+	if ok {
+		// compare time to check if it is still banned
+		if inTimeSpan(bannedClient.BanTime, bannedClient.BanTime.Add(BannedTime*time.Second), time.Now()) {
+			msg.Conn.Write([]byte(fmt.Sprintf("You are banned for %v seconds\n", secondsUntilUnban(bannedClient.BanTime))))
+			msg.Conn.Close()
+			return
+		}
+
+		delete(bannedClients, address)
+	}
 
 	switch msg.Type {
 	case domain.ClientConnected:
@@ -82,12 +90,12 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client, banne
 				msg.Conn.Close()
 				fmt.Printf(ClientDisconnected, safeAdress(msg.Conn))
 				delete(clients, address)
-				// bannedClients[addressWithoutPort] = &domain.Client{
-				// 	Conn:        msg.Conn,
-				// 	BanTime:     time.Now(),
-				// 	LastMessage: time.Now(),
-				// 	StrikeCount: 0,
-				// }
+				bannedClients[addressWithoutPort] = &domain.Client{
+					Conn:        msg.Conn,
+					BanTime:     time.Now(),
+					LastMessage: time.Now(),
+					StrikeCount: MaxStrikeCount,
+				}
 			}
 			return
 		}
