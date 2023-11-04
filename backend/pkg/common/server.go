@@ -19,6 +19,8 @@ const (
 	MessageAdded           = "Message added: %s. From user %s\n"
 	MessageReceived        = "Message received: %s\n"
 	DefaultCase            = "Unknown message type: %s\n"
+	RateLimiter            = 2
+	RateLimiterMessage     = "Your are sending messages too fast\n"
 )
 
 func safeAdress(addr net.Conn) string {
@@ -52,6 +54,13 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 	case domain.MessageReceived:
 		fmt.Printf(MessageReceived, msg.Body)
 		// Send message to all clients except the one who sent it
+
+		// rate limit messages
+		if time.Since(clients[address].LastMessage) < RateLimiter*time.Second {
+			msg.Conn.Write([]byte(RateLimiterMessage))
+			return
+		}
+
 		for _, client := range clients {
 			if client.Conn.RemoteAddr().String() != address {
 				if client.Conn != nil {
@@ -59,6 +68,8 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 
 				}
 			}
+			// update last message time
+			clients[address].LastMessage = time.Now()
 		}
 
 	case domain.DisconnectRequest:
