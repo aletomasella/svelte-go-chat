@@ -7,7 +7,7 @@ import (
 )
 
 func Client(conn net.Conn, messages chan domain.Message) {
-	buffer := make([]byte, bufferSize)
+	buffer := make([]byte, BufferSize)
 
 	for {
 		n, err := conn.Read(buffer)

@@ -9,10 +9,15 @@ import (
 )
 
 const (
-	SafeMode           = false
-	ClientDisconnected = "Client %s Disconnected\n"
-	ClientConnected    = "Client %s Connected\n"
-	DefaultCase        = "ERROR : Message type not found for Message %s\n"
+	SafeMode               = false
+	ClientDisconnected     = "Client %s Disconnected\n"
+	BufferSize             = 128
+	ClientConnected        = "Client %s Connected\n"
+	ErrorReadingConnection = "ERROR: Trying to read connection, but failed because of %s\n"
+	ErrorInvalidMessage    = "ERROR: Invalid Message Provided\n"
+	MessageAdded           = "Message added: %s. From user %s\n"
+	MessageReceived        = "Message received: %s\n"
+	DefaultCase            = "Unknown message type: %s\n"
 )
 
 func safeAdress(addr net.Conn) string {
@@ -49,8 +54,15 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 				}
 			}
 		}
+
 	default:
 		fmt.Printf(DefaultCase, msg.Body)
+		client := clients[address]
+		if client != nil {
+			client.Conn.Write([]byte(ErrorInvalidMessage))
+			fmt.Print(ErrorInvalidMessage)
+			client.Conn.Close()
+		}
 	}
 }
 
