@@ -16,6 +16,7 @@ func Client(conn net.Conn, messages chan domain.Message) {
 	Commands["/quit"] = int(domain.DisconnectRequest)
 
 	Commands["/test"] = int(domain.TestingCommand)
+
 	for {
 		n, err := conn.Read(buffer)
 

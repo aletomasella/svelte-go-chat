@@ -19,8 +19,10 @@ const (
 	MessageAdded           = "Message added: %s. From user %s\n"
 	MessageReceived        = "Message received: %s\n"
 	DefaultCase            = "Unknown message type: %s\n"
-	RateLimiter            = 2
-	RateLimiterMessage     = "Your are sending messages too fast\n"
+	RateLimiter            = 1
+	RateLimiterMessage     = "Your are sending messages too fast. Strike Count : %v\n"
+	MaxStrikeCount         = 5
+	MaxStrikeCountReach    = "You reached the max strike count. Disconnecting...\n"
 )
 
 func safeAdress(addr net.Conn) string {
@@ -40,6 +42,7 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 		clients[address] = &domain.Client{
 			Conn:        msg.Conn,
 			LastMessage: time.Now(),
+			StrikeCount: 0,
 		}
 		// send commnads available
 		msg.Conn.Write([]byte(fmt.Sprintf("Commands available: %v\n", commandsKeys)))
@@ -57,8 +60,16 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 
 		// rate limit messages
 		if time.Since(clients[address].LastMessage) < RateLimiter*time.Second {
-			msg.Conn.Write([]byte(RateLimiterMessage))
-			return
+			msg.Conn.Write([]byte(fmt.Sprintf(RateLimiterMessage, clients[address].StrikeCount)))
+			// Should i reset the strike count? TODO
+			clients[address].StrikeCount++
+
+			if clients[address].StrikeCount > MaxStrikeCount {
+				msg.Conn.Write([]byte(MaxStrikeCountReach))
+				msg.Conn.Close()
+				fmt.Printf(ClientDisconnected, safeAdress(msg.Conn))
+				delete(clients, address)
+			}
 		}
 
 		for _, client := range clients {

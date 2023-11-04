@@ -33,6 +33,7 @@ type Post struct {
 type Client struct {
 	Conn        net.Conn
 	LastMessage time.Time
+	StrikeCount int
 }
 
 type MessageType int
