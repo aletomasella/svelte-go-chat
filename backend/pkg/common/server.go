@@ -61,7 +61,6 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 		// rate limit messages
 		if time.Since(clients[address].LastMessage) < RateLimiter*time.Second {
 			msg.Conn.Write([]byte(fmt.Sprintf(RateLimiterMessage, clients[address].StrikeCount)))
-			// Should i reset the strike count? TODO
 			clients[address].StrikeCount++
 
 			if clients[address].StrikeCount > MaxStrikeCount {
@@ -70,6 +69,7 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 				fmt.Printf(ClientDisconnected, safeAdress(msg.Conn))
 				delete(clients, address)
 			}
+			return
 		}
 
 		for _, client := range clients {
@@ -81,6 +81,7 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 			}
 			// update last message time
 			clients[address].LastMessage = time.Now()
+			clients[address].StrikeCount = 0
 		}
 
 	case domain.DisconnectRequest:
