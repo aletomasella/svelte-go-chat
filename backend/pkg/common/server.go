@@ -19,10 +19,11 @@ const (
 	MessageAdded           = "Message added: %s. From user %s\n"
 	MessageReceived        = "Message received: %s\n"
 	DefaultCase            = "Unknown message type: %s\n"
-	RateLimiter            = 1
+	RateLimiter            = 2
 	RateLimiterMessage     = "Your are sending messages too fast. Strike Count : %v\n"
 	MaxStrikeCount         = 5
 	MaxStrikeCountReach    = "You reached the max strike count. Disconnecting...\n"
+	BannedTime             = 60
 )
 
 func safeAdress(addr net.Conn) string {
@@ -32,11 +33,24 @@ func safeAdress(addr net.Conn) string {
 	return addr.RemoteAddr().String()
 }
 
-func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
+func handleMessages(msg domain.Message, clients map[string]*domain.Client, bannedClients map[string]*domain.Client) {
 
 	commandsKeys := maps.Keys(Commands)
-
 	address := msg.Conn.RemoteAddr().String()
+	// addressWithoutPort := address[:len(address)-6]
+	// bannedClient, ok := bannedClients[addressWithoutPort]
+
+	// if ok {
+	// 	if bannedClient.Conn != nil {
+	// 		bannedClient.Conn.Write([]byte(fmt.Sprintf("You are banned for %v seconds\n", bannedClient.BanTime.Second())))
+	// 		bannedClient.Conn.Close()
+	// 		return
+	// 	}
+	// 	if time.Since(bannedClient.BanTime) > BannedTime*time.Second {
+	// 		delete(bannedClients, address)
+	// 	}
+	// }
+
 	switch msg.Type {
 	case domain.ClientConnected:
 		clients[address] = &domain.Client{
@@ -68,6 +82,12 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 				msg.Conn.Close()
 				fmt.Printf(ClientDisconnected, safeAdress(msg.Conn))
 				delete(clients, address)
+				// bannedClients[addressWithoutPort] = &domain.Client{
+				// 	Conn:        msg.Conn,
+				// 	BanTime:     time.Now(),
+				// 	LastMessage: time.Now(),
+				// 	StrikeCount: 0,
+				// }
 			}
 			return
 		}
@@ -76,7 +96,6 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 			if client.Conn.RemoteAddr().String() != address {
 				if client.Conn != nil {
 					client.Conn.Write([]byte(msg.Body))
-
 				}
 			}
 			// update last message time
@@ -100,11 +119,12 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 
 func ChannelServer(msgChannel chan domain.Message) {
 	clients := make(map[string]*domain.Client)
+	bannedClients := make(map[string]*domain.Client)
 
 	// Infinite loop
 	for {
 		msg := <-msgChannel
-		handleMessages(msg, clients)
+		handleMessages(msg, clients, bannedClients)
 	}
 
 }

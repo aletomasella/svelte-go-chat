@@ -34,6 +34,7 @@ type Client struct {
 	Conn        net.Conn
 	LastMessage time.Time
 	StrikeCount int
+	BanTime     time.Time
 }
 
 type MessageType int
