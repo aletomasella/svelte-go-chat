@@ -31,6 +31,8 @@ func main() {
 
 	msgChannel := make(chan domain.Message)
 
+	//Inicialize the server that will listen to the messages
+	// Go Routine means that the function will run in parallel
 	go common.ChannelServer(msgChannel)
 
 	for {
@@ -47,6 +49,7 @@ func main() {
 			Body: "",
 		}
 
+		//Inicialize the client that will listen to the messages
 		go common.Client(conn, msgChannel)
 
 	}

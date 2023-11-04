@@ -11,6 +11,8 @@ const (
 	ClientConnected MessageType = iota + 1
 	ClientDisconnected
 	MessageReceived
+	DisconnectRequest
+	TestingCommand
 )
 
 type User struct {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aletomasella/svelte-go-chat/pkg/domain"
+	"golang.org/x/exp/maps"
 )
 
 const (
@@ -29,6 +30,8 @@ func safeAdress(addr net.Conn) string {
 
 func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 
+	commandsKeys := maps.Keys(Commands)
+
 	address := msg.Conn.RemoteAddr().String()
 	switch msg.Type {
 	case domain.ClientConnected:
@@ -36,6 +39,9 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 			Conn:        msg.Conn,
 			LastMessage: time.Now(),
 		}
+		// send commnads available
+		msg.Conn.Write([]byte(fmt.Sprintf("Commands available: %v\n", commandsKeys)))
+
 		fmt.Printf(ClientConnected, safeAdress(msg.Conn))
 
 	case domain.ClientDisconnected:
@@ -55,6 +61,9 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client) {
 			}
 		}
 
+	case domain.DisconnectRequest:
+		fmt.Printf(ClientDisconnected, safeAdress(msg.Conn))
+		msg.Conn.Close()
 	default:
 		fmt.Printf(DefaultCase, msg.Body)
 		client := clients[address]
