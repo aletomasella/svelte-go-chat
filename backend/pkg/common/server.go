@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/aletomasella/svelte-go-chat/pkg/domain"
@@ -65,6 +66,7 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client, banne
 			Conn:        msg.Conn,
 			LastMessage: time.Now(),
 			StrikeCount: 0,
+			UserName:    "",
 		}
 		// send commnads available
 		msg.Conn.Write([]byte(fmt.Sprintf("Commands available: %v\n", commandsKeys)))
@@ -72,9 +74,18 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client, banne
 		fmt.Printf(ClientConnected, safeAdress(msg.Conn))
 
 	case domain.ClientDisconnected:
-		delete(clients, address)
+		disconnectedClient := clients[address]
 		msg.Conn.Close()
 		fmt.Printf(ClientDisconnected, safeAdress(msg.Conn))
+		delete(clients, address)
+		// Send message to all clients that a user disconnected
+		for _, client := range clients {
+			if client.Conn.RemoteAddr().String() != address {
+				if client.Conn != nil {
+					client.Conn.Write([]byte(fmt.Sprintf("Client %s Disconnected\n", disconnectedClient.UserName)))
+				}
+			}
+		}
 
 	case domain.MessageReceived:
 		fmt.Printf(MessageReceived, msg.Body)
@@ -95,6 +106,7 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client, banne
 					BanTime:     time.Now(),
 					LastMessage: time.Now(),
 					StrikeCount: MaxStrikeCount,
+					UserName:    "",
 				}
 			}
 			return
@@ -114,6 +126,22 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client, banne
 	case domain.DisconnectRequest:
 		fmt.Printf(ClientDisconnected, safeAdress(msg.Conn))
 		msg.Conn.Close()
+		disconnectedClient := clients[address]
+		delete(clients, address)
+		// Send message to all clients that a user disconnected
+		for _, client := range clients {
+			if client.Conn.RemoteAddr().String() != address {
+				if client.Conn != nil {
+					client.Conn.Write([]byte(fmt.Sprintf("Client %s Disconnected\n", disconnectedClient.UserName)))
+				}
+			}
+		}
+
+	case domain.SetUsername:
+		clients[address].UserName = strings.TrimSpace(strings.Replace(msg.Body, "/username ", "", 1))
+		fmt.Printf("Client %s set username to %s\n", safeAdress(msg.Conn), clients[address].UserName)
+		msg.Conn.Write([]byte(fmt.Sprintf("Username set to %s\n", clients[address].UserName)))
+
 	default:
 		fmt.Printf(DefaultCase, msg.Body)
 		client := clients[address]

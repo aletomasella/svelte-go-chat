@@ -15,7 +15,7 @@ func Client(conn net.Conn, messages chan domain.Message) {
 	buffer := make([]byte, BufferSize)
 	Commands["/quit"] = int(domain.DisconnectRequest)
 
-	Commands["/test"] = int(domain.TestingCommand)
+	Commands["/username"] = int(domain.SetUsername)
 
 	for {
 		n, err := conn.Read(buffer)
@@ -33,6 +33,15 @@ func Client(conn net.Conn, messages chan domain.Message) {
 		msg := string(buffer[:n])
 
 		if n > 0 && len(msg) == n {
+
+			if strings.Contains(msg, "/username") {
+				messages <- domain.Message{
+					Type: domain.SetUsername,
+					Conn: conn,
+					Body: msg,
+				}
+				return
+			}
 
 			// need to trim the message because it comes with spaces
 			val, ok := Commands[strings.TrimSpace(msg)]

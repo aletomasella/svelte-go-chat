@@ -12,7 +12,7 @@ const (
 	ClientDisconnected
 	MessageReceived
 	DisconnectRequest
-	TestingCommand
+	SetUsername
 )
 
 type User struct {
@@ -35,6 +35,7 @@ type Client struct {
 	LastMessage time.Time
 	StrikeCount int
 	BanTime     time.Time
+	UserName    string
 }
 
 type MessageType int
