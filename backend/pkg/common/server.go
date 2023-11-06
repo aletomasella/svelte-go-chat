@@ -141,6 +141,7 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client, banne
 		clients[address].UserName = strings.TrimSpace(strings.Replace(msg.Body, "/username ", "", 1))
 		fmt.Printf("Client %s set username to %s\n", safeAdress(msg.Conn), clients[address].UserName)
 		msg.Conn.Write([]byte(fmt.Sprintf("Username set to %s\n", clients[address].UserName)))
+		return
 
 	default:
 		fmt.Printf(DefaultCase, msg.Body)

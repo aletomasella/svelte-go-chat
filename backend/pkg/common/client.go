@@ -13,9 +13,9 @@ var (
 
 func Client(conn net.Conn, messages chan domain.Message) {
 	buffer := make([]byte, BufferSize)
-	Commands["/quit"] = int(domain.DisconnectRequest)
+	Commands[":quit"] = int(domain.DisconnectRequest)
 
-	Commands["/username"] = int(domain.SetUsername)
+	// Commands[":username"] = int(domain.SetUsername)
 
 	for {
 		n, err := conn.Read(buffer)
@@ -33,8 +33,7 @@ func Client(conn net.Conn, messages chan domain.Message) {
 		msg := string(buffer[:n])
 
 		if n > 0 && len(msg) == n {
-
-			if strings.Contains(msg, "/username") {
+			if strings.Contains(msg, ":username") {
 				messages <- domain.Message{
 					Type: domain.SetUsername,
 					Conn: conn,
