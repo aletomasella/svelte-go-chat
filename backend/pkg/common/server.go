@@ -62,11 +62,19 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client, banne
 
 	switch msg.Type {
 	case domain.ClientConnected:
+		hashedIP, err := AdressHash(msg.Conn.RemoteAddr().String())
+
+		if err != nil {
+			fmt.Printf("ERROR: %s\n", err)
+			hashedIP = "ERROR"
+		}
+
 		clients[address] = &domain.Client{
 			Conn:        msg.Conn,
 			LastMessage: time.Now(),
 			StrikeCount: 0,
 			UserName:    "",
+			HashedIP:    hashedIP,
 		}
 		// send commnads available
 		msg.Conn.Write([]byte(fmt.Sprintf("Commands available: %v\n", commandsKeys)))
@@ -141,7 +149,20 @@ func handleMessages(msg domain.Message, clients map[string]*domain.Client, banne
 		clients[address].UserName = strings.TrimSpace(strings.Replace(msg.Body, "/username ", "", 1))
 		fmt.Printf("Client %s set username to %s\n", safeAdress(msg.Conn), clients[address].UserName)
 		msg.Conn.Write([]byte(fmt.Sprintf("Username set to %s\n", clients[address].UserName)))
-		return
+
+	case domain.GetUsers:
+		fmt.Printf("Client %s requested users\n", safeAdress(msg.Conn))
+		usersHashedIPs := make([]string, 0)
+
+		for _, client := range clients {
+			if client.Conn.RemoteAddr().String() != address {
+				if client.Conn != nil {
+					usersHashedIPs = append(usersHashedIPs, client.HashedIP)
+				}
+			}
+		}
+
+		msg.Conn.Write([]byte(fmt.Sprintf("Users: %v\n", usersHashedIPs)))
 
 	default:
 		fmt.Printf(DefaultCase, msg.Body)

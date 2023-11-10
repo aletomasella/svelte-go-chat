@@ -13,6 +13,7 @@ const (
 	MessageReceived
 	DisconnectRequest
 	SetUsername
+	GetUsers
 )
 
 type User struct {
@@ -36,6 +37,7 @@ type Client struct {
 	StrikeCount int
 	BanTime     time.Time
 	UserName    string
+	HashedIP    string
 }
 
 type MessageType int

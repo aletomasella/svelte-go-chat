@@ -14,7 +14,7 @@ var (
 func Client(conn net.Conn, messages chan domain.Message) {
 	buffer := make([]byte, BufferSize)
 	Commands[":quit"] = int(domain.DisconnectRequest)
-
+	Commands[":users"] = int(domain.GetUsers)
 	// Commands[":username"] = int(domain.SetUsername)
 
 	for {
