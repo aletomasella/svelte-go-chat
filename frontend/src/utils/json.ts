@@ -25,6 +25,8 @@ function formatValuesIntoString(data: unknown): string {
 		}
 	}
 
+	console.log(data);
+
 	return data.toString();
 }
 
